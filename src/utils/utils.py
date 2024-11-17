@@ -100,7 +100,8 @@ def remove_top_margin(page: str):
         'Playground': -140,
         'Admin': -100,
         'Settings': -120,
-        'About DataBot': -120
+        'About DataBot': -120,
+        'Open Data': -70
     }
     st.markdown(
         f"""
