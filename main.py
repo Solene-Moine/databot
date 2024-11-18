@@ -5,6 +5,7 @@ from streamlit.web import cli as stcli
 
 from src.app.app import create_app
 from src.ui.admin import admin
+from src.ui.open_data import open_data
 from src.ui.playground import playground
 from src.ui.about import about
 from src.utils.session_monitoring import run_thread_session_monitoring
@@ -34,6 +35,8 @@ if __name__ == "__main__":
             playground()
         elif page == 'Admin':
             admin()
+        elif page == 'Open Data':
+            open_data()
         elif page == 'Settings':
             settings()
         elif page == 'About DataBot':

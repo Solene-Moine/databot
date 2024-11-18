@@ -7,6 +7,7 @@ def sidebar_menu():
     page = sac.menu([
         sac.MenuItem('Playground', icon='robot'),
         sac.MenuItem('Admin', icon='person'),
+        sac.MenuItem('Open Data', icon='book'),
         sac.MenuItem('Settings', icon='gear'),
         sac.MenuItem('About DataBot', icon='info-circle'),
     ], open_all=True)
