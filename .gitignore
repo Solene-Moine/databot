@@ -1,2 +1,15 @@
 # Sphinx documentation
 docs/_build/
+
+# Ignore Python compiled files
+*.pyc
+__pycache__/
+
+# Ignore logs and temporary files
+*.log
+tmp/
+
+# Ignore environment files
+.env
+
+config.ini

@@ -6,6 +6,7 @@ from datetime import datetime
 
 import pandas as pd
 import plotly
+import re
 import streamlit as st
 import websocket
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -14,6 +15,11 @@ from besser.bot.core.message import Message, MessageType
 from besser.bot.platforms.payload import Payload, PayloadAction, PayloadEncoder
 
 from src.app.parent_bot import parent_bot
+from src.app.app import get_app
+from src.app.project import Project
+from src.utils.session_state_keys import AI_ICON, CKAN, COUNT_CSVS, COUNT_DATASETS, EDITED_PACKAGES_DF, IMPORT, \
+    IMPORT_OPEN_DATA_PORTAL, METADATA, OPEN_DATA_SOURCES, SELECTED_PROJECT, SELECT_ALL_CHECKBOXES, TITLE, UDATA, \
+    UPLOAD_DATA
 from src.utils.session_monitoring import get_streamlit_session
 
 
@@ -31,6 +37,7 @@ def open_data():
     def on_message(ws, payload_str):
         #https://github.com/streamlit/streamlit/issues/2838
         """This function is run on every message the bot sends"""
+        dataset_creation = False
         streamlit_session = get_streamlit_session()
         payload: Payload = Payload.decode(payload_str)
         content = None
@@ -49,15 +56,29 @@ def open_data():
             content = []
             for button in d.values():
                 content.append(button)
+
         if content is not None:
-            message = Message(t=t, content=content, is_user=False, timestamp=datetime.now())
-            streamlit_session._session_state['queue'].put(message)
+            # Check if content is a URL and create an expander entry
+            if t == MessageType.STR and re.match(r'^(https?|ftp)://[^\s/$.?#].[^\s]*$', content):
+                streamlit_session.session_state["expanders"] = [] #reset the previous datasets when the user ask for a new one
+                expander_entry = {"dataset_title": f"Expander", "url": content}
+                streamlit_session._session_state["expanders"].append(expander_entry)
+            else:
+                message = Message(t=t, content=content, is_user=False, timestamp=datetime.now())
+                streamlit_session._session_state['queue'].put(message)
+            
+            
+                
         streamlit_session._handle_rerun_script_request()
 
     user_type = {
         0: 'assistant',
         1: 'user'
     }
+
+    # Initialize session state
+    if "expanders" not in st.session_state:
+        st.session_state["expanders"] = []
 
     if 'history' not in st.session_state:
         st.session_state['history'] = []
@@ -77,12 +98,42 @@ def open_data():
 
     ws = st.session_state['websocket_parent']
 
-    # open_data_url = st.text_input('Enter URL')
+    col1, col2 = st.columns([6, 3], gap = "large")  # Adjust columns to control layout
 
+# Sidebar for expanders
+    if st.session_state["expanders"]:
+        with st.container():  # Display expanders in a container on the right
+            with col2:  # Right column
+                st.write("### Data Exploration")
+                for expander in st.session_state["expanders"]:
+                    with st.expander(expander["dataset_title"], expanded=True):
+                        st.write(f"URL: {expander['url']}")
+                        delimiter = st.text_input(label='Delimiter', value=',', key=f'input_{expander["url"]}')
+                        if st.button(f"Generate bot", key=f'button_{expander["url"]}'):
+                            app = get_app()
+                            file_url = expander["url"]
+                            if file_url is None:
+                                st.error('Please introduce a CSV URL')
+                            else:
+                                project_name = expander["dataset_title"]
+                                if project_name in [project.name for project in app.projects]:
+                                    st.error(f"The project name '{project_name}' already exists. Please choose another one")
+                                else:
+                                    project = Project(app, project_name, pd.read_csv(file_url, delimiter=delimiter))
+                                    st.session_state[SELECTED_PROJECT] = project
+                                    st.info(
+                                        f'The project **{project.name}** has been created! Go to **Admin** to train a 🤖 bot upon it.')
+
+    # Display chat messages
     for message in st.session_state['history']:
-        with st.chat_message(user_type[message.is_user]):
-            st.write(message.content)
-
+        if st.session_state["expanders"]:
+            with col1:
+                with st.chat_message(user_type[message.is_user]):
+                    st.write(message.content)
+        else:
+            with st.chat_message(user_type[message.is_user]):
+                st.write(message.content)
+        
     while not st.session_state['queue'].empty():
         with st.chat_message("assistant"):
             message = st.session_state['queue'].get()
