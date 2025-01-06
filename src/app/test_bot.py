@@ -39,7 +39,21 @@ bot.set_default_ic_config(ic_config)
 
 ############################################################################################################################################
 
-# STATES
+# OTHER FUNCTIONS
+
+def updateTags(): #get all the existing tags from datalux
+    url = "https://data.public.lu/api/1/datasets/?format=csv"
+    tags = set()
+    while(url):
+        response = requests.get(url).json()
+        for dataset in response['data']:
+            tags.update(dataset['tags'])
+        url = response['next_page']
+    with open("src/app/datasets_tags.json", "w") as file:
+        dict_tags = {"tags": list(tags)}
+        json.dump(dict_tags, file, indent=4)
+
+# STATES BODIES' DEFINITION + TRANSITIONS
 
 greetings_state = bot.new_state('greetings_state', initial=True)
 smalltalk_state = bot.new_state('smalltalk_state')
@@ -94,6 +108,7 @@ bot.set_global_fallback_body(global_fallback_body)
 
 def greetings_body(session: Session):
     answer = gpt.predict(f"You are a helpful assistant. Start the conversation with a short (2-15 words) greetings message. Make it original.")
+    updateTags()
     session.reply(answer)
 
 
