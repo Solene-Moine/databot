@@ -8,19 +8,14 @@ import json
 
 from besser.bot.core.bot import Bot
 from besser.bot.core.session import Session
-from besser.bot.platforms.websocket import WEBSOCKET_PORT
 from besser.bot.nlp.intent_classifier.intent_classifier_prediction import IntentClassifierPrediction
 from besser.bot.nlp.intent_classifier.intent_classifier_configuration import LLMIntentClassifierConfiguration
-
 from besser.bot.nlp.llm.llm_openai_api import LLMOpenAI
-
-#from besser.bot.nlp.llm.llm_openai_api import LLMOpenAI
-#from besser.bot.nlp.intent_classifier.intent_classifier_configuration import LLMIntentClassifierConfiguration
+from besser.bot.platforms.websocket import WEBSOCKET_PORT
 
 # Configure the logging module
 logging.basicConfig(level=logging.INFO, format='{levelname} - {asctime}: {message}', style='{')
 
-# Create the parent_bot
 parent_bot = Bot('parent_bot')
 parent_bot.load_properties('config.ini')
 websocket_platform = parent_bot.use_websocket_platform(use_ui=False)
@@ -32,6 +27,7 @@ gpt = LLMOpenAI(
     parameters={},
     num_previous_messages=10
 )
+
 
 ic_config = LLMIntentClassifierConfiguration(
     llm_name='gpt-4o-mini',
@@ -50,11 +46,9 @@ parent_bot.set_default_ic_config(ic_config)
 
 # STATES
 ###################################################################################################
-
 initial_state = parent_bot.new_state('initial_parent_botstate', initial=True)
 smalltalk_state = parent_bot.new_state('smalltalk_state')
 confused_state = parent_bot.new_state('confused_state')
-name_state = parent_bot.new_state('name_state')
 id_state = parent_bot.new_state('id_state')
 update_state = parent_bot.new_state('update_state')
 #######################################################################################################
@@ -71,13 +65,18 @@ id_entity = parent_bot.new_entity(
     entries=id_entries
 )
 
-name_entity = parent_bot.new_entity(
+"""name_entity = parent_bot.new_entity(
     name='name_entity',
     description='The name of a dataset, a string of alphabetical characters',
     entries={
     'name1': [],
     'name2': [],
     }
+)"""
+
+word_entity = parent_bot.new_entity(
+    name='word_entity',
+    description='a word, a string of alphabetical characters with meaning',
 )
 ############################################################################################################
 
@@ -90,16 +89,16 @@ id_intent = parent_bot.new_intent('id_intent', [
 ])
 id_intent.parameter('id1', 'ID', id_entity)
 
-name_intent = parent_bot.new_intent('name_intent', [
-    'What dataset is called NAME?',
-    'name dataset NAME',
-    'dataset name NAME',
-])
-name_intent.parameter('name1', 'NAME', name_entity)
-
 update_intent = parent_bot.new_intent('update_intent', [
     'update',
 ])
+
+database_intent = parent_bot.new_intent('database_intent', [
+    'What is database talks about TOPIC',
+    'id dataset ID',
+    'dataset id ID',
+])
+id_intent.parameter('topic1', 'TOPIC', word_entity)
 
 smalltalk_intent = parent_bot.new_intent(
     name='smalltalk_intent',
@@ -130,8 +129,10 @@ def updateDatabase():
 # STATES BODIES' DEFINITION + TRANSITIONS
 
 def confused_body(session: Session):
-    answer = gpt.predict(f"You are being used within an intent-based chatbot. Your goal is to help the user browse data websites to find relevant datasets for their needs. You are generating a fallback answer because the intent of the user was not identified. Generate a message similar to 'I am sorry, I did not quite catch what you were trying to ask here. Can you rephrase it ?', based on the user message: {session.message}")
-    session.reply(answer)
+    #answer = gpt.predict(f"You are being used within an intent-based chatbot. Your goal is to help the user browse data websites to find relevant datasets for their needs. You are generating a fallback answer because the intent of the user was not identified. Generate a message similar to 'I am sorry, I did not quite catch what you were trying to ask here. Can you rephrase it ?', based on the user message: {session.message}")
+    #session.reply(answer)
+    session.reply("I didn't understand what you are trying to ask.")
+    
 
 def smalltalk_body(session: Session):
     answer = gpt.predict(f"You are being used within an intent-based chatbot. Your goal is to help the user browse data websites to find relevant datasets for their needs. This answer is generated because the user attempted to make small talk or to ask a question that has nothing to do with the aim of the chatbot. Generate a message similar to 'That seems very interesting, but my purpose is to help you find datasets relevant to your needs, not this.', based on the user message: {session.message}")
@@ -145,16 +146,8 @@ def initial_body(session: Session):
 
 initial_state.set_body(initial_body)
 initial_state.when_intent_matched_go_to(id_intent, id_state)
-initial_state.when_intent_matched_go_to(name_intent, name_state)
 initial_state.when_intent_matched_go_to(update_intent, update_state)
 parent_bot.set_global_fallback_body(confused_body)
-
-
-def name_body(session: Session):
-    session.reply('I cannot give you any information about this yet. But my next update surely will fix this !')
-
-name_state.set_body(name_body)
-name_state.go_to(initial_state)
 
 
 def id_body(session: Session):
