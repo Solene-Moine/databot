@@ -53,7 +53,7 @@ def updateTags(): #get all the existing tags from datalux
         dict_tags = {"tags": list(tags)}
         json.dump(dict_tags, file, indent=4)
 
-# STATES BODIES' DEFINITION + TRANSITIONS
+# STATES
 
 greetings_state = bot.new_state('greetings_state', initial=True)
 smalltalk_state = bot.new_state('smalltalk_state')
@@ -108,7 +108,6 @@ bot.set_global_fallback_body(global_fallback_body)
 
 def greetings_body(session: Session):
     answer = gpt.predict(f"You are a helpful assistant. Start the conversation with a short (2-15 words) greetings message. Make it original.")
-    updateTags()
     session.reply(answer)
 
 
@@ -138,12 +137,21 @@ def databaseRequest_body(session: Session):
     predicted_intent: IntentClassifierPrediction = session.predicted_intent
     topic = predicted_intent.get_parameter('topic1')
     if topic.value is None:
-        session.reply("Sorry, it seems this tag isn't actually a word.")
+        session.reply("Sorry, it seems this tag doesn't mean anything.")
     else:
         url = "https://data.public.lu/api/1/datasets/?tag=" + str(topic.value) + "&format=csv"
         response = requests.get(url).json()
         if not response['data']:
             session.reply(f"Sorry, no datasets were found for the tag '{topic.value}'.")
+            with open("src/app/datasets_tags.json", 'r') as file:
+                available_tags = json.load(file)
+            tags_set = set(available_tags["tags"])
+            tags_str = ", ".join(str(tag) for tag in tags_set)
+            answer = gpt.predict(
+                f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
+                f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list."
+                )
+            session.reply(answer)
             return
         else :
             session.reply(f"I found {len(response['data'])} results mentionning {topic.value}.")
