@@ -63,14 +63,13 @@ def open_data():
             # Check if content is a URL and create an expander entry
             if t == MessageType.STR and re.match(r'^(https?|ftp)://[^\s/$.?#].[^\s]*$', content):
                 #streamlit_session.session_state["expanders"] = [] #reset the previous datasets when the user ask for a new one
-                expander_entry = {"dataset_title": f"Expander", "url": content}
+                expander_entry = {"dataset_title": f"Title", "dataset_date": f"Date", "dataset_description": f"Description", "dataset_url": content}
                 streamlit_session._session_state["expanders"].append(expander_entry)
             else:
                 message = Message(t=t, content=content, is_user=False, timestamp=datetime.now())
                 streamlit_session._session_state['queue'].put(message)
             
             
-                
         streamlit_session._handle_rerun_script_request()
 
     user_type = {
@@ -102,18 +101,20 @@ def open_data():
 
 # Sidebar for expanders
     if st.session_state["expanders"]:
-        st.write("### Data Exploration")
         for expander in st.session_state["expanders"]:
             with st.expander(expander["dataset_title"], expanded=False):
-                st.write(f"URL: {expander['url']}")
-                delimiter = st.text_input(label='Delimiter', value=',', key=f'input_{expander["url"]}')
-                if st.button(f"Generate bot", key=f'button_{expander["url"]}'):
+                st.write(f"Title: {expander['dataset_title']}")
+                st.write(f"URL: {expander['dataset_url']}")
+                st.write(f"Creation Date: {expander['dataset_date']}")
+                st.write(f"Description: {expander['dataset_description']}")
+                delimiter = st.text_input(label='Delimiter', value=',', key=f'delimiter_{expander["dataset_url"]}')
+                project_name = st.text_input(label='Project Name', value=expander["dataset_title"], key=f'name_{expander["dataset_url"]}')
+                if st.button(f"Generate bot", key=f'button_{expander["dataset_url"]}'):
                     app = get_app()
-                    file_url = expander["url"]
+                    file_url = expander["dataset_url"]
                     if file_url is None:
                         st.error('Please introduce a CSV URL')
                     else:
-                        project_name = expander["dataset_title"]
                         if project_name in [project.name for project in app.projects]:
                             st.error(f"The project name '{project_name}' already exists. Please choose another one")
                         else:

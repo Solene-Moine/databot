@@ -58,6 +58,7 @@ def updateTags(): #get all the existing tags from datalux
 greetings_state = bot.new_state('greetings_state', initial=True)
 smalltalk_state = bot.new_state('smalltalk_state')
 databaseRequest_state = bot.new_state('databaseRequest_state')
+updateTags_state = bot.new_state('updateTags_state')
 answer_state = bot.new_state('answer_state')
 
 # ENTITIES
@@ -93,6 +94,15 @@ smalltalk_intent = bot.new_intent(
      'give me a cooking recipe'
      'help me solve this math problem'
      'is Italy a democraty'
+])
+
+updateTags_intent = bot.new_intent(
+    name='updateTags_intent',
+    description='The user is asking you to update the list of available tags because they think it might be out of date.',
+    training_sentences = ['Can you update the tags?',
+     'Update the tags.'
+     'Keep your list of available tags up to date.'
+     'Get the new tags.'
 ])
 
 
@@ -149,17 +159,27 @@ def databaseRequest_body(session: Session):
             tags_str = ", ".join(str(tag) for tag in tags_set)
             answer = gpt.predict(
                 f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
-                f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list."
+                f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list. Also tell them that they can ask you to update your tag list if they think it is not up to date."
                 )
             session.reply(answer)
             return
         else :
-            session.reply(f"I found {len(response['data'])} results mentionning {topic.value}.")
+            session.reply(f"I found {len(response['data'])} result(s) mentionning {topic.value}:")
             for dataset in response['data']:
                 for resource in dataset['resources']:
                     if resource['format'] == "csv":
                         session.reply(f"{resource['url']}")
+                        break
             
-
 databaseRequest_state.set_body(databaseRequest_body)
 databaseRequest_state.go_to(greetings_state)
+
+def updateTags_body(session: Session):
+    session.reply(f"I am updating my tag list. Please wait, it might take a while. I will tell you when I am done.")
+    updateTags()
+    session.reply(f"The update is over!")
+
+
+updateTags_state.set_body(updateTags_body)
+updateTags_state.set_global(updateTags_state)
+updateTags_state.go_to(greetings_state)
