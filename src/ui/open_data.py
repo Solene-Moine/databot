@@ -110,14 +110,14 @@ def open_data():
 
     ws = st.session_state['websocket_parent']
 
-# Sidebar for expanders
+# Display expanders
     if st.session_state["expanders"]:
         for expander in st.session_state["expanders"]:
             with st.expander(expander["dataset_title"], expanded=False):
                 st.write(f"Title: {expander['dataset_title']}")
-                st.write(f"URL: {expander['dataset_url']}")
                 st.write(f"Creation Date: {expander['dataset_date']}")
                 st.write(f"Description: {expander['dataset_description']}")
+                st.write(f"URL: {expander['dataset_url']}")
                 delimiter = st.text_input(label='Delimiter', value=',', key=f'delimiter_{expander["dataset_url"]}')
                 project_name = st.text_input(label='Project Name', value=expander["dataset_title"], key=f'name_{expander["dataset_url"]}')
                 if st.button(f"Generate bot", key=f'button_{expander["dataset_url"]}'):
@@ -136,12 +136,8 @@ def open_data():
 
     # Display chat messages
     for message in st.session_state['history']:
-        if st.session_state["expanders"]:
-            with st.chat_message(user_type[message.is_user]):
-                st.write(message.content)
-        else:
-            with st.chat_message(user_type[message.is_user]):
-                st.write(message.content)
+        with st.chat_message(user_type[message.is_user]):
+            st.write(message.content)
         
     while not st.session_state['queue'].empty():
         with st.chat_message("assistant"):

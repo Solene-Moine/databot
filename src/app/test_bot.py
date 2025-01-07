@@ -56,6 +56,7 @@ def updateTags(): #get all the existing tags from datalux
 # STATES
 
 greetings_state = bot.new_state('greetings_state', initial=True)
+help_state = bot.new_state('help_state')
 transition_state = bot.new_state('transition_state')
 smalltalk_state = bot.new_state('smalltalk_state')
 databaseRequest_state = bot.new_state('databaseRequest_state')
@@ -75,6 +76,19 @@ hello_intent = bot.new_intent(
     name='hello_intent',
     description='The user greets you'
 )
+
+help_intent = bot.new_intent(
+    name='help_intent',
+    description='The user is asking for help concerning your functionnalities.',
+    training_sentences = [
+     'what can you do ?',
+     'help',
+     'can you help me',
+     'how do I get a specific dataset ?',
+     'how do I ask you for a dataset ?',
+     'what can I ask for',
+     'where are your data coming from'
+])
 
 databaseRequest_intent = bot.new_intent(
     name = 'databaseRequest_intent',
@@ -129,6 +143,18 @@ greetings_state.when_intent_matched_go_to(smalltalk_intent, smalltalk_state)
 greetings_state.when_intent_matched_go_to(databaseRequest_intent, databaseRequest_state)
 greetings_state.when_intent_matched_go_to(updateTags_intent, updateTags_state)
 
+def help_body(session: Session):
+    answer = gpt.predict(
+        f"You are being used within an intent-based chatbot. The user is asking for help concerning your functionnalities. Give an answer based on the user message : {session.message}, and using the following informations :"
+        f"You are an helpful assistant chatbot, that has access to the datasets of the luxembourgish open data platform (data.public.lu). You can provide the user with a dataset suited to their needs if they give you keywords on what they are looking for."
+        f"You can then generate another chatbot trained on the dataset the user chose, and who will be able to answer any question concerning this specific dataset."
+        )
+    session.reply(answer)
+
+
+help_state.set_body(help_body)
+help_state.set_global(help_intent)
+help_state.go_to(transition_state)
 
 def transition_body(session: Session):
     session.reply("Do you need anything else ?")
@@ -162,7 +188,8 @@ def databaseRequest_body(session: Session):
             tags_str = ", ".join(str(tag) for tag in tags_set)
             answer = gpt.predict(
                 f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
-                f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list. Also tell them that they can ask you to update your tag list if they think it is not up to date."
+                f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list."
+                f"If you haven't already, tell them that they can ask you to update your tag list if they think it is not up to date." #can they know if they have already said it ?
                 )
             session.reply(answer)
             return
