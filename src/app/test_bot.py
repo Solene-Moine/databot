@@ -56,6 +56,7 @@ def updateTags(): #get all the existing tags from datalux
 # STATES
 
 greetings_state = bot.new_state('greetings_state', initial=True)
+transition_state = bot.new_state('transition_state')
 smalltalk_state = bot.new_state('smalltalk_state')
 databaseRequest_state = bot.new_state('databaseRequest_state')
 updateTags_state = bot.new_state('updateTags_state')
@@ -89,20 +90,21 @@ smalltalk_intent = bot.new_intent(
     name='smalltalk_intent',
     description='The user is trying to talk about random things that are not related to datasets creation, which are out of your purpose. The questions can be extremely varied.',
     training_sentences = ['how are you doing?',
-     'do you want to chat?'
-     'what is your favorite color?'
-     'give me a cooking recipe'
-     'help me solve this math problem'
-     'is Italy a democraty'
+     'do you want to chat?',
+     'what is your favorite color?',
+     'give me a cooking recipe',
+     'help me solve this math problem',
+     'is Italy a democraty',
 ])
 
 updateTags_intent = bot.new_intent(
     name='updateTags_intent',
     description='The user is asking you to update the list of available tags because they think it might be out of date.',
     training_sentences = ['Can you update the tags?',
-     'Update the tags.'
-     'Keep your list of available tags up to date.'
-     'Get the new tags.'
+     'Update the tags.',
+     'Keep your list of available tags up to date.',
+     'Get the new tags.',
+     'You should update your tags.'
 ])
 
 
@@ -117,31 +119,32 @@ bot.set_global_fallback_body(global_fallback_body)
 
 
 def greetings_body(session: Session):
-    answer = gpt.predict(f"You are a helpful assistant. Start the conversation with a short (2-15 words) greetings message. Make it original.")
+    answer = gpt.predict(f"You are being used within an intent-based chatbot. Your goal is to help the user browse data websites to find relevant datasets for their needs. Start the conversation with a short (5-20 words) greetings message asking the user what they need.")
     session.reply(answer)
 
 
 greetings_state.set_body(greetings_body)
-# Here, we could create a state for each intent, but we keep it simple
 greetings_state.when_intent_matched_go_to(hello_intent, greetings_state)
 greetings_state.when_intent_matched_go_to(smalltalk_intent, smalltalk_state)
 greetings_state.when_intent_matched_go_to(databaseRequest_intent, databaseRequest_state)
+greetings_state.when_intent_matched_go_to(updateTags_intent, updateTags_state)
 
 
-def answer_body(session: Session):
-    answer = gpt.predict(session.message)
-    session.reply(answer)
+def transition_body(session: Session):
+    session.reply("Do you need anything else ?")
 
 
-answer_state.set_body(answer_body)
-answer_state.go_to(greetings_state)
+transition_state.set_body(transition_body)
+transition_state.when_intent_matched_go_to(smalltalk_intent, smalltalk_state)
+transition_state.when_intent_matched_go_to(databaseRequest_intent, databaseRequest_state)
+transition_state.when_intent_matched_go_to(updateTags_intent, updateTags_state)
 
 def smalltalk_body(session: Session):
     answer = gpt.predict(f"You are being used within an intent-based chatbot. Your goal is to help the user browse data websites to find relevant datasets for their needs. This answer is generated because the user attempted to make small talk or to ask a question that has nothing to do with the aim of the chatbot. Generate a message similar to 'That seems very interesting, but my purpose is to help you find datasets relevant to your needs, not this.', based on the user message: {session.message}")
     session.reply(answer)
 
 smalltalk_state.set_body(smalltalk_body)
-smalltalk_state.go_to(greetings_state)
+smalltalk_state.go_to(transition_state)
 
 def databaseRequest_body(session: Session):
     predicted_intent: IntentClassifierPrediction = session.predicted_intent
@@ -168,11 +171,13 @@ def databaseRequest_body(session: Session):
             for dataset in response['data']:
                 for resource in dataset['resources']:
                     if resource['format'] == "csv":
-                        session.reply(f"{resource['url']}")
+                        useful_info_dict = {"dataset_title": resource["title"], "dataset_date": resource["created_at"], "dataset_description": resource["description"], "dataset_url": resource["url"]}
+                        useful_info_string = json.dumps(useful_info_dict)
+                        session.reply(useful_info_string)
                         break
             
 databaseRequest_state.set_body(databaseRequest_body)
-databaseRequest_state.go_to(greetings_state)
+databaseRequest_state.go_to(transition_state)
 
 def updateTags_body(session: Session):
     session.reply(f"I am updating my tag list. Please wait, it might take a while. I will tell you when I am done.")
@@ -181,5 +186,4 @@ def updateTags_body(session: Session):
 
 
 updateTags_state.set_body(updateTags_body)
-updateTags_state.set_global(updateTags_state)
-updateTags_state.go_to(greetings_state)
+updateTags_state.go_to(transition_state)

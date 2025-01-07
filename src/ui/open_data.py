@@ -6,7 +6,6 @@ from datetime import datetime
 
 import pandas as pd
 import plotly
-import re
 import streamlit as st
 import websocket
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -36,6 +35,13 @@ def open_data():
     # User input component. Must be declared before history writing
     user_input = st.chat_input("What is up?")
 
+    def is_json(string):
+        try:
+            json.loads(string)
+            return True
+        except json.JSONDecodeError:
+            return False
+
     def on_message(ws, payload_str):
         #https://github.com/streamlit/streamlit/issues/2838
         """This function is run on every message the bot sends"""
@@ -60,10 +66,15 @@ def open_data():
                 content.append(button)
 
         if content is not None:
-            # Check if content is a URL and create an expander entry
-            if t == MessageType.STR and re.match(r'^(https?|ftp)://[^\s/$.?#].[^\s]*$', content):
+            if t == MessageType.STR and is_json(content):
+                useful_info_dict = json.loads(content)
+                expander_entry = {
+                    "dataset_title": useful_info_dict["dataset_title"],
+                    "dataset_date": useful_info_dict["dataset_date"],
+                    "dataset_description": useful_info_dict["dataset_description"],
+                    "dataset_url": useful_info_dict["dataset_url"]
+                }
                 #streamlit_session.session_state["expanders"] = [] #reset the previous datasets when the user ask for a new one
-                expander_entry = {"dataset_title": f"Title", "dataset_date": f"Date", "dataset_description": f"Description", "dataset_url": content}
                 streamlit_session._session_state["expanders"].append(expander_entry)
             else:
                 message = Message(t=t, content=content, is_user=False, timestamp=datetime.now())
