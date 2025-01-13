@@ -41,6 +41,9 @@ bot.set_default_ic_config(ic_config)
 
 # OTHER FUNCTIONS
 
+global user_knows_about_tags
+user_knows_about_tags = False
+
 def updateTags(): #get all the existing tags from datalux
     url = "https://data.public.lu/api/1/datasets/?format=csv"
     tags = set()
@@ -97,6 +100,7 @@ databaseRequest_intent = bot.new_intent(
     'What database talks about TOPIC',
     'Can you give me a TOPIC dataset',
     'I would like to see datas on TOPIC',
+    'data on TOPIC',
 ])
 databaseRequest_intent.parameter('topic1', 'TOPIC', word_entity)
 
@@ -173,6 +177,7 @@ smalltalk_state.set_body(smalltalk_body)
 smalltalk_state.go_to(transition_state)
 
 def databaseRequest_body(session: Session):
+    global user_knows_about_tags
     predicted_intent: IntentClassifierPrediction = session.predicted_intent
     topic = predicted_intent.get_parameter('topic1')
     if topic.value is None:
@@ -181,27 +186,42 @@ def databaseRequest_body(session: Session):
         url = "https://data.public.lu/api/1/datasets/?tag=" + str(topic.value) + "&format=csv"
         response = requests.get(url).json()
         if not response['data']:
-            session.reply(f"Sorry, no datasets were found for the tag '{topic.value}'.")
             with open("src/app/datasets_tags.json", 'r') as file:
                 available_tags = json.load(file)
             tags_set = set(available_tags["tags"])
             tags_str = ", ".join(str(tag) for tag in tags_set)
-            answer = gpt.predict(
-                f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
-                f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list."
-                f"If you haven't already, tell them that they can ask you to update your tag list if they think it is not up to date." #can they know if they have already said it ?
-                )
+            if user_knows_about_tags == False:
+                answer = gpt.predict(
+                    f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
+                    f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list."
+                    f"Tell them that they can ask you to update your tag list if they think it is not up to date."
+                    )
+                user_knows_about_tags = True
+            else:
+                answer = gpt.predict(
+                    f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
+                    f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list."
+                    )
             session.reply(answer)
             return
         else :
-            session.reply(f"I found {len(response['data'])} result(s) mentionning {topic.value}:")
+
+
+            session.reply(f"I found {len(response['data'])} result(s) mentioning {topic.value}:")
+            all_datasets_info = []
             for dataset in response['data']:
                 for resource in dataset['resources']:
                     if resource['format'] == "csv":
-                        useful_info_dict = {"dataset_title": resource["title"], "dataset_date": resource["created_at"], "dataset_description": resource["description"], "dataset_url": resource["url"]}
-                        useful_info_string = json.dumps(useful_info_dict)
-                        session.reply(useful_info_string)
+                        useful_info_dict = {
+                            "dataset_title": resource["title"],
+                            "dataset_date": resource["created_at"],
+                            "dataset_description": resource["description"],
+                            "dataset_url": resource["url"]
+                        }
+                        all_datasets_info.append(useful_info_dict)
                         break
+            all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
+            session.reply(all_datasets_info_json)
             
 databaseRequest_state.set_body(databaseRequest_body)
 databaseRequest_state.go_to(transition_state)
