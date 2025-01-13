@@ -15,7 +15,6 @@ from besser.bot.core.message import Message, MessageType
 from besser.bot.platforms.payload import Payload, PayloadAction, PayloadEncoder
 
 from src.app.parent_bot import parent_bot
-from src.app.test_bot import bot #temporary, for tests
 from src.app.app import get_app
 from src.app.project import Project
 from src.app.content import Content
@@ -27,8 +26,7 @@ from src.utils.session_monitoring import get_streamlit_session
 
 @st.cache_resource
 def run_parent_bot():
-    #parent_bot.run(sleep=False)
-    bot.run(sleep=False) #temporary, for tests
+    parent_bot.run(sleep=False)
 
 def open_data():
     run_parent_bot()
