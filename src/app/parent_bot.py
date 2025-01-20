@@ -4,6 +4,7 @@
 
 import logging
 import requests
+from requests.exceptions import RequestException
 import json
 
 from besser.bot.core.bot import Bot
@@ -41,20 +42,34 @@ parent_bot.set_default_ic_config(ic_config)
 
 # OTHER FUNCTIONS
 
-global user_knows_about_tags
-user_knows_about_tags = False
+global user_knows_about_tags_update
+user_knows_about_tags_update = False
 
-def updateTags(): #get all the existing tags from datalux
-    url = "https://data.public.lu/api/1/datasets/?format=csv"
+def updateTags(): #get all the existing tags
+    with open("src/app/open_data_portal_API.json", 'r') as file:
+        website_dict = json.load(file)
     tags = set()
-    while(url):
-        response = requests.get(url).json()
-        for dataset in response['data']:
-            tags.update(dataset['tags'])
-        url = response['next_page']
+
+    for root_url in website_dict["udata_root"]: #works for any website using uData API. Only need to update open_data_portal_API.json to give the html root
+        url = root_url + "?format=csv"
+        while(url):
+            try:
+                response = requests.get(url).json()
+                for dataset in response['data']:
+                    tags.update(dataset['tags'])
+                url = response['next_page']
+            except RequestException as e:
+                print(f"Error: Unable to load URL {url}. Exception: {e}")
+                break
     with open("src/app/datasets_tags.json", "w") as file:
         dict_tags = {"tags": list(tags)}
         json.dump(dict_tags, file, indent=4)
+
+    """for root_url in website_dict["ckan_root"]:
+        url = root_url + "tag_list"
+        updateTagsPortal(url)"""
+
+
 
 # STATES
 
@@ -220,52 +235,79 @@ smalltalk_state.set_body(smalltalk_body)
 smalltalk_state.go_to(transition_state)
 
 def databaseRequest_body(session: Session):
-    global user_knows_about_tags
+    global user_knows_about_tags_update
     predicted_intent: IntentClassifierPrediction = session.predicted_intent
     topic = predicted_intent.get_parameter('topic1')
     if topic.value is None:
-        session.reply("Sorry, it seems this tag doesn't mean anything.")
+        session.reply("Sorry, I didn't catch the tag you were looking for")
     else:
-        url = "https://data.public.lu/api/1/datasets/?tag=" + str(topic.value) + "&format=csv"
-        response = requests.get(url).json()
-        if not response['data']:
-            with open("src/app/datasets_tags.json", 'r') as file:
+        #url = "https://data.public.lu/api/1/datasets/?tag=" + str(topic.value) + "&format=csv" #lux
+        #https://www.data.gouv.fr/api/1/datasets/?tag=economy&format=csv #fr
+        #https://dados.gov.pt/api/1/datasets/?tag=local #portuguese
+
+        #ckan
+        #url = https://catalog.data.gov/api/3/action/package_search?q=tags:mobility&fq=res_format:CSV #for specific tag and specific format in resources #us gov, no tag list
+        #https://www.donneesquebec.ca/recherche/api/action/tag_list #tag list works!!! #données quebec
+        #https://opendata.nhsbsa.net/api/3/action/tag_list #données NHS "The NHS Business Services Authority (NHSBSA) is an executive non-departmental public body of the Department of Health and Social Care which provides a number of support services to the National Health Service in England and Wales."
+        #https://ckan.opendata.swiss/api/3/action/tag_list #données suisse
+        #https://data.cnra.ca.gov/api/3/action/tag_list #california natural ressources agency
+        #https://open.canada.ca/data/en/api/3/action/package_list #canado gov, no tag list
+        #https://opendata-ajuntament.barcelona.cat/data/api/3/action/tag_list #barcelona
+        #https://catalog.sarawak.gov.my/api/3/action/tag_list #sarawak partie de la malaisie
+        #https://open.africa/api/3/action/tag_list
+        #https://data.gov.au/api/3/action/tag_list #australia
+        #https://data.gov.ie/api/3/action/tag_list #ireland
+        #https://data.boston.gov/api/3/action/tag_list #boston (us city)
+        #https://www.data.qld.gov.au/api/3/action/tag_list #queensland (australie)
+        #https://data.illinois.gov/api/3/action/tag_list #state of US
+        #https://dati.gov.it/opendata/api/3/action/tag_list #italy
+        with open("src/app/datasets_tags.json", 'r') as file:
                 available_tags = json.load(file)
+        if str(topic.value) not in available_tags["tags"] :
             tags_set = set(available_tags["tags"])
             tags_str = ", ".join(str(tag) for tag in tags_set)
-            if user_knows_about_tags == False:
+            if user_knows_about_tags_update == False:
                 answer = gpt.predict(
                     f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
-                    f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list."
+                    f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list. You can give several tags, but they have to be on the list."
                     f"Tell them that they can ask you to update your tag list if they think it is not up to date."
                     )
-                user_knows_about_tags = True
+                user_knows_about_tags_update = True
             else:
                 answer = gpt.predict(
-                    f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
-                    f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list."
+                    f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none."
+                    f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym to their first demand if one is in the list. You can give several tags, but they have to be on the list."
                     )
             session.reply(answer)
             return
-        else :
-
-
-            session.reply(f"I found {len(response['data'])} result(s) mentioning {topic.value}:")
+        else : #the API request is only made if the bots know that there will be at least one dataset returned
+            print("hell no")
+            with open("src/app/open_data_portal_API.json", 'r') as file:
+                website_dict = json.load(file)
             all_datasets_info = []
-            for dataset in response['data']:
-                for resource in dataset['resources']:
-                    if resource['format'] == "csv":
-                        useful_info_dict = {
-                            "dataset_title": resource["title"],
-                            "dataset_date": resource["created_at"],
-                            "dataset_description": resource["description"],
-                            "dataset_url": resource["url"]
-                        }
-                        all_datasets_info.append(useful_info_dict)
-                        break
-            all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
-            session.reply(all_datasets_info_json)
-            
+            for root_url in website_dict["udata_root"]:
+                url = root_url + "/?tag=" + str(topic.value) + "&format=csv"
+                response = requests.get(url).json()
+                if response['data']:
+                    for dataset in response['data']:
+                        for resource in dataset['resources']:
+                            if resource['format'] == "csv":
+                                useful_info_dict = {
+                                    "dataset_title": resource["title"],
+                                    "dataset_date": resource["created_at"],
+                                    "dataset_description": resource["description"],
+                                    "dataset_url": resource["url"]
+                                }
+                                all_datasets_info.append(useful_info_dict)
+                                break
+            if not all_datasets_info: #not a single dataset was found, even though the tag is in the list of available datasets
+                session.reply(f"I didn't find a single dataset for the tag {topic.value}, even though there should be one. You might want to ask me to update my tag list.")
+                return
+            else :
+                session.reply(f"I found {len(all_datasets_info)} result(s) mentioning {topic.value}:")
+                all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
+                session.reply(all_datasets_info_json)
+                
 databaseRequest_state.set_body(databaseRequest_body)
 databaseRequest_state.go_to(transition_state)
 
