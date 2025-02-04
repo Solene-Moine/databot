@@ -1,8 +1,8 @@
 {   
     "udata_root" : [
-        "https://data.public.lu/api/1/datasets/",
-        "https://www.data.gouv.fr/api/1/datasets/",
-        "https://dados.gov.pt/api/1/datasets/"
+        "https://data.public.lu/",
+        "https://www.data.gouv.fr/",
+        "https://dados.gov.pt/"
     ],
     "ckan_root" : [
         "https://catalog.data.gov/api/3/action/",

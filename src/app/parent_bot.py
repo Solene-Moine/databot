@@ -258,14 +258,14 @@ def databaseRequest_body(session: Session):
                 website_dict = json.load(file)
             all_datasets_info = []
             for root_url in website_dict["udata_root"]:
-                url = root_url + "/?tag=" + str(topic.value) + "&format=csv"
+                url = root_url + "api/1/datasets/" + "/?tag=" + str(topic.value) + "&format=csv"
                 response = requests.get(url).json()
                 if response['data']:
                     for dataset in response['data']:
                         for resource in dataset['resources']:
                             if resource['format'] == "csv":
                                 title_prompt = (
-                                    f"Generate a very short descriptive title for a dataset based on the following information from the dataset:\n"
+                                    f"Generate a very short descriptive title for a dataset, based on the following information from the dataset:\n"
                                     f"{resource['title']}\n"
                                     f"{dataset['acronym']}\n"
                                     f"{resource['description']}\n"
@@ -273,7 +273,7 @@ def databaseRequest_body(session: Session):
                                     f"No bullet points or sub-titles, only a short title."
                                 )
                                 description_prompt = (
-                                    f"Generate a short description for a dataset using the following context:\n"
+                                    f"Generate a short description for a dataset, using the following context:\n"
                                     f"title : {resource['title']}\n"
                                     f"other title : {dataset['acronym']}\n"
                                     f"date : {resource['created_at']}\n"
@@ -285,6 +285,7 @@ def databaseRequest_body(session: Session):
                                 dataset_title = gpt.predict(title_prompt).strip()
                                 dataset_description = gpt.predict(description_prompt).strip()
                                 useful_info_dict = {
+                                    "dataset_source": root_url,
                                     "dataset_title": dataset_title if dataset_title else resource["title"],
                                     "dataset_date": resource["created_at"],
                                     "dataset_description": dataset_description if dataset_description else resource["description"],

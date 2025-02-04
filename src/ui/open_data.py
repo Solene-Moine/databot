@@ -45,7 +45,7 @@ def open_data():
     def display_expanders(message):
         for expander_entry in message.content.expanders:
             with st.expander(expander_entry["dataset_title"], False):   
-                st.write(f"Source platform:")
+                st.write(f"Source platform: {expander_entry['dataset_source']}")
                 st.write(f"Title: {expander_entry['dataset_title']}")
                 st.write(f"Creation Date: {expander_entry['dataset_date']}")
                 st.write(f"Organization: {expander_entry['dataset_organization']}")
@@ -99,6 +99,7 @@ def open_data():
                 useful_info_list = json.loads(main_content)
                 for useful_info_dict in useful_info_list:
                     expander_entry = {
+                        "dataset_source": useful_info_dict["dataset_source"],
                         "dataset_title": useful_info_dict["dataset_title"],
                         "dataset_date": useful_info_dict["dataset_date"],
                         "dataset_organization": useful_info_dict["dataset_organization"],
