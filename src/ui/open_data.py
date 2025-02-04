@@ -44,14 +44,16 @@ def open_data():
         
     def display_expanders(message):
         for expander_entry in message.content.expanders:
-            with st.expander(expander_entry["dataset_title"], expanded=False):   
+            with st.expander(expander_entry["dataset_title"], False):   
+                st.write(f"Source platform:")
                 st.write(f"Title: {expander_entry['dataset_title']}")
                 st.write(f"Creation Date: {expander_entry['dataset_date']}")
+                st.write(f"Organization: {expander_entry['dataset_organization']}")
                 st.write(f"Description: {expander_entry['dataset_description']}")
-                st.write(f"URL: {expander_entry['dataset_url']}")
+                st.write(f"CSV URL: {expander_entry['dataset_url']}")
                 delimiter = st.text_input(label='Delimiter', value=',', key=f'delimiter_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}')
                 project_name = st.text_input(label='Project Name', value=expander_entry["dataset_title"], key=f'name_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}')
-                if st.button(f"Generate bot", key=f'button_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}'):
+                if st.button(f"Generate bot", key=f'button_{expander_entry["dataset_url"]}'):
                     app = get_app()
                     file_url = expander_entry["dataset_url"]
                     if file_url is None:
@@ -99,6 +101,7 @@ def open_data():
                     expander_entry = {
                         "dataset_title": useful_info_dict["dataset_title"],
                         "dataset_date": useful_info_dict["dataset_date"],
+                        "dataset_organization": useful_info_dict["dataset_organization"],
                         "dataset_description": useful_info_dict["dataset_description"],
                         "dataset_url": useful_info_dict["dataset_url"]
                     }
