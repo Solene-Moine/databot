@@ -1,4 +1,4 @@
-# DataBot: Reliable data exploration through chatbots
+# DataBot and ParentBot: Reliable data exploration through chatbots
 
 This platform is used to create bots whose job is to answer questions about a specific data source. It allows the automatic
 generation of a chat/voice bot swarm to attend all the data sources in an **Open Data Portal**.
@@ -24,6 +24,27 @@ The highlights of DataBot are:
 - Python 3.11
 - Recommended: Create a virtual environment (e.g. [venv](https://docs.python.org/3/library/venv.html), [conda](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html))
 
+For example with venv, after installing Python 3.11 on your machine, you can create a new virtual environment: 
+
+```bash
+python3.11 -m venv ChatbotVirtualEnv
+```
+
+You will need to activate this environment for use:
+```bash
+source ChatbotVirtualEnv/bin/activate
+```
+
+To deactivate the virtual environment: 
+```bash
+deactivate ChatbotVirtualEnv 
+```
+
+To permanently delete the environment: 
+```bash
+rm -rf ChatbotVirtualEnv (depuis le parent directory)
+```
+
 ### Installation
 
 ```bash
@@ -31,6 +52,42 @@ git clone https://github.com/BESSER-PEARL/databot
 cd databot
 pip install -r requirements.txt
 python main.py
+touch config.ini
+```
+
+### Configuration
+
+For the parent_bot to work, you will need an OpenAI API Key.
+In your config.ini, paste the following text, but replace "YOUR-OPENAI-API-KEY" with your actual key. 
+
+```bash
+[websocket_platform]
+websocket.host = localhost
+websocket.port = 8764
+streamlit.host = localhost
+streamlit.port = 5000
+
+[telegram_platform]
+telegram.token = YOUR-BOT-TOKEN
+
+[nlp]
+nlp.language = en
+nlp.region = US
+nlp.timezone = Europe/Madrid
+nlp.pre_processing = True
+nlp.intent_threshold = 0.4
+nlp.openai.api_key = YOUR-OPENAI-API-KEY
+nlp.hf.api_key = YOUR-API-KEY
+nlp.replicate.api_key = YOUR-API-KEY
+
+[db]
+db.monitoring = False
+db.monitoring.dialect = postgresql
+db.monitoring.host = localhost
+db.monitoring.port = 5432
+db.monitoring.database = DB-NAME
+db.monitoring.username = DB-USERNAME
+db.monitoring.password = DB-PASSWORD
 ```
 
 ### License
