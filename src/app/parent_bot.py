@@ -15,8 +15,6 @@ from besser.bot.nlp.intent_classifier.intent_classifier_configuration import LLM
 from besser.bot.nlp.llm.llm_openai_api import LLMOpenAI
 from besser.bot.platforms.websocket import WEBSOCKET_PORT
 
-#from besser.agent.library.entity.base_entities import datetime_entity
-
 logging.basicConfig(level=logging.INFO, format='{levelname} - {asctime}: {message}', style='{')
 
 parent_bot = Bot('llm_bot')
@@ -47,6 +45,8 @@ parent_bot.set_default_ic_config(ic_config)
 
 global user_knows_about_tags_update
 user_knows_about_tags_update = False
+global user_has_been_greeted
+user_has_been_greeted = False
 
 def updateTags(): #get all the existing tags
     with open("src/app/open_data_portal_API.json", 'r') as file:
@@ -74,7 +74,7 @@ def updateTags(): #get all the existing tags
 
 # STATES
 
-greetings_state = parent_bot.new_state('greetings_state', initial=True)
+neutral_state = parent_bot.new_state('neutral_state', initial=True)
 help_state = parent_bot.new_state('help_state')
 transition_state = parent_bot.new_state('transition_state')
 databaseRequest_state = parent_bot.new_state('databaseRequest_state')
@@ -109,9 +109,6 @@ negative_intent = parent_bot.new_intent(
         'I will not',
         'I do not need it',
         'I do not need you',
-        'that will be all.',
-        'go away',
-        'leave me alone.'
     ]
 )
 
@@ -194,13 +191,19 @@ parent_bot.set_global_fallback_body(global_fallback_body)
 
 
 
-def greetings_body(session: Session):
-    answer = gpt.predict(f"You are being used within an intent-based chatbot. Your goal is to help the user browse data websites to find relevant datasets for their needs. Start the conversation with a short (5-20 words) greetings message asking the user what they need.")
-    session.reply(answer)
+def neutral_body(session: Session):
+    global user_has_been_greeted
+    if (not user_has_been_greeted):
+        answer = gpt.predict(f"You are being used within an intent-based chatbot. Your goal is to help the user browse data websites to find relevant datasets for their needs. Start the conversation with a short (5-20 words) greetings message asking the user what they need.")
+        session.reply(answer)
+        user_has_been_greeted = True
+    else:
+        session.reply("What else can I do for you ?")
 
-greetings_state.set_body(greetings_body)
-greetings_state.when_intent_matched_go_to(hello_intent, greetings_state)
-greetings_state.when_intent_matched_go_to(updateTags_intent, updateTags_state)
+neutral_state.set_body(neutral_body)
+neutral_state.when_intent_matched_go_to(hello_intent, neutral_state)
+neutral_state.when_intent_matched_go_to(databaseRequest_intent, databaseRequest_state)
+neutral_state.when_intent_matched_go_to(updateTags_intent, updateTags_state)
 
 
 
@@ -214,19 +217,12 @@ def help_body(session: Session):
 
 help_state.set_body(help_body)
 help_state.set_global(help_intent)
-help_state.go_to(transition_state)
-
-
-
-def transition_body(session: Session):
-    session.reply("Do you need anything else ?")
-
-transition_state.set_body(transition_body)
-transition_state.when_intent_matched_go_to(updateTags_intent, updateTags_state)
+help_state.go_to(neutral_state)
 
 
 
 def databaseRequest_body(session: Session):
+    session.reply("Let me check the database... 🔄")
     global user_knows_about_tags_update
     session.set('need_more_detail_on_request', False)
     predicted_intent: IntentClassifierPrediction = session.predicted_intent
@@ -257,6 +253,7 @@ def databaseRequest_body(session: Session):
             with open("src/app/open_data_portal_API.json", 'r') as file:
                 website_dict = json.load(file)
             all_datasets_info = []
+            session.reply("There are a few relevant datasets, please hang on a little while ! 🙏")
             for root_url in website_dict["udata_root"]:
                 url = root_url + "api/1/datasets/" + "/?tag=" + str(topic.value) + "&format=csv"
                 response = requests.get(url).json()
@@ -312,9 +309,8 @@ def databaseRequest_body(session: Session):
                 #     session.reply(f"I found quite a lot of datasets mentioning {topic.value}. Can you give me more details on what you are looking for ?")
  
 databaseRequest_state.set_body(databaseRequest_body)
-databaseRequest_state.set_global(databaseRequest_intent)
 databaseRequest_state.when_variable_matches_operation_go_to('need_more_detail_on_request', operator.eq, True, askForMoreDetails_state)  
-databaseRequest_state.when_variable_matches_operation_go_to('need_more_detail_on_request', operator.eq, False, transition_state)
+databaseRequest_state.when_variable_matches_operation_go_to('need_more_detail_on_request', operator.eq, False, neutral_state)
 
 
 
@@ -352,18 +348,10 @@ databaseRequest_state.when_variable_matches_operation_go_to('need_more_detail_on
 # giveMoreDetails_state.go_to(transition_state)
 
 
-
-def iddle_body(session: Session):
-    session.reply(f"Very well, tell me if you need anything.")
-
-iddle_state.set_body(iddle_body)
-
-
-
 def updateTags_body(session: Session):
     session.reply(f"I am updating my tag list. Please wait, it might take a while. I will tell you when I am done.")
     updateTags()
     session.reply(f"The update is over!")
 
 updateTags_state.set_body(updateTags_body)
-updateTags_state.go_to(transition_state)
+updateTags_state.go_to(neutral_state)
