@@ -19,17 +19,17 @@ The highlights of DataBot are:
 
 ![DataBot Playground Screenshot](docs/source/img/playground_screenshot.png)
 
-But how you might be asking yourself, "how can you find the perfect dataset for my needs ?"
-Look no further than **ParentBot** ! Its features include:
+But you might be asking yourself, "how can you find the perfect dataset for my needs ?"
+Look no further than **ParentBot**👴 !
 
-- I worked really hard on it
+- 🔍 **Find the right dataset, instantly**. Just enter a few keywords, and ParentBot will track down the most relevant datasets from multiple Open Data Platforms.
+  - 🎯 **Precision search**. If too many results are found, ParentBot will ask follow-up questions to refine your search — so you don’t have to scroll endlessly!
+  - 📜 **Smart dataset previews**. Get concise summaries of each dataset before making your choice, saving you time and effort.
+  - 🤖 **One-click chatbot creation**. Found what you need? Just hit "Generate Bot", and DataBot will take over and analyze your selected datasets.
+- 🔄 **Synonym-powered search**. No matches? ParentBot suggests alternative keywords and related terms to help you uncover hidden gems.
+- 🌍 **Expandable access**. Need more sources? Easily integrate additional Open Data platforms in just a few steps ! (see Enhancement section)
 
-- How to use it?
- - What's the answer when you don't have results?
- - What's the answer when you have results? What can you do next?
- - Describe how to add new URLs to look for datasets
-
-insert pretty screenshot here
+insert pretty screenshot here (need to see what several expanders look like, and what synonym proposition looks like)
 
 ## Requirements
 
@@ -107,6 +107,10 @@ To launch the platform in your browser, simply run this command from the databot
 ```bash
 streamlit run main.py
 ```
+
+## Enhancement
+
+how to add more data platform, possibly ckan ?
 
 ## License
 
