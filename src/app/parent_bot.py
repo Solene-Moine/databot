@@ -41,7 +41,7 @@ parent_bot.set_default_ic_config(ic_config)
 
 ############################################################################################################################################
 
-# OTHER FUNCTIONS
+# ADDITIONNAL FUNCTIONS / VARIABLES
 
 global user_knows_about_tags_update
 user_knows_about_tags_update = False
@@ -69,6 +69,51 @@ def updateTags(): #get all the existing tags
         json.dump(dict_tags, file, indent=4)
 
     """for root_url in website_dict["ckan_root"]:""" #eventually support could be added for open data website using the ckan API
+
+
+def get_datasets_info_with_tag_from_platform(opendata_url, tag, datasets_info):
+    url = opendata_url + "api/1/datasets/" + "/?tag=" + tag + "&format=csv"
+    response = {}
+    try:
+        response = requests.get(url).json()
+    except:
+        print(f"Error: Unvalid API request {url}. You might want to look into it. Is the main website of this data platform down ?")
+    if not len(response) == 0 and response['data']:
+        for dataset in response['data']:
+            for resource in dataset['resources']:
+                if resource['format'] == "csv":
+                    response = requests.head(resource["url"]) #check that the csv link given is valid before considering the dataset as useful
+                    if response.status_code == 200:
+                        title_prompt = (
+                            f"Generate a very short descriptive title for a dataset, based on the following information from the dataset:\n"
+                            f"{resource['title']}\n"
+                            f"{dataset['acronym']}\n"
+                            f"{resource['description']}\n"
+                            f"{dataset['description']}\n"
+                            f"No bullet points or sub-titles, only a short title."
+                        )
+                        description_prompt = (
+                            f"Generate a short description for a dataset, using the following context:\n"
+                            f"title : {resource['title']}\n"
+                            f"other title : {dataset['acronym']}\n"
+                            f"date : {resource['created_at']}\n"
+                            f"frequency : {dataset['frequency']}\n"
+                            f"description : {resource['description']}\n"
+                            f"other description : {dataset['description']}\n"
+                            f"No bullet points or titles, only a short 50-70 words description. You must only talk concisely about the content of the dataset."
+                        )
+                        dataset_title = gpt.predict(title_prompt).strip()
+                        dataset_description = gpt.predict(description_prompt).strip()
+                        useful_info_dict = {
+                            "dataset_source": opendata_url,
+                            "dataset_title": dataset_title if dataset_title else resource["title"],
+                            "dataset_date": resource["created_at"],
+                            "dataset_description": dataset_description if dataset_description else resource["description"],
+                            "dataset_organization": dataset.get("organization", {}) and dataset["organization"].get("acronym", "Unknown"),  #There isn't always an organization
+                            "dataset_url": resource["url"]
+                        }
+                        datasets_info.append(useful_info_dict)
+                        break
 
 
 
@@ -255,46 +300,7 @@ def databaseRequest_body(session: Session):
             all_datasets_info = []
             session.reply("There are a few relevant datasets, please hang on a little while ! 🙏")
             for root_url in website_dict["udata_root"]:
-                url = root_url + "api/1/datasets/" + "/?tag=" + str(topic.value) + "&format=csv"
-                response = {}
-                try:
-                    response = requests.get(url).json()
-                except:
-                    print(f"Error: Unvalid API request {url}. You might want to look into it. Is the main website of this data platform down ?")
-                if not len(response) == 0 and response['data']:
-                    for dataset in response['data']:
-                        for resource in dataset['resources']:
-                            if resource['format'] == "csv":
-                                title_prompt = (
-                                    f"Generate a very short descriptive title for a dataset, based on the following information from the dataset:\n"
-                                    f"{resource['title']}\n"
-                                    f"{dataset['acronym']}\n"
-                                    f"{resource['description']}\n"
-                                    f"{dataset['description']}\n"
-                                    f"No bullet points or sub-titles, only a short title."
-                                )
-                                description_prompt = (
-                                    f"Generate a short description for a dataset, using the following context:\n"
-                                    f"title : {resource['title']}\n"
-                                    f"other title : {dataset['acronym']}\n"
-                                    f"date : {resource['created_at']}\n"
-                                    f"frequency : {dataset['frequency']}\n"
-                                    f"description : {resource['description']}\n"
-                                    f"other description : {dataset['description']}\n"
-                                    f"No bullet points or titles, only a short 50-70 words description. You must only talk concisely about the content of the dataset."
-                                )
-                                dataset_title = gpt.predict(title_prompt).strip()
-                                dataset_description = gpt.predict(description_prompt).strip()
-                                useful_info_dict = {
-                                    "dataset_source": root_url,
-                                    "dataset_title": dataset_title if dataset_title else resource["title"],
-                                    "dataset_date": resource["created_at"],
-                                    "dataset_description": dataset_description if dataset_description else resource["description"],
-                                    "dataset_organization": dataset.get("organization", {}) and dataset["organization"].get("acronym", "Unknown"),  #There isn't always an organization
-                                    "dataset_url": resource["url"]
-                                }
-                                all_datasets_info.append(useful_info_dict)
-                                break
+                get_datasets_info_with_tag_from_platform(root_url, str(topic.value), all_datasets_info)
             if not all_datasets_info: #not a single dataset was found, even though the tag is in the list of available datasets. Perhaps it is no longer available
                 session.reply(f"I didn't find a single dataset for the tag {topic.value}, even though there should be one. You might want to ask me to update my tag list.")
                 return
