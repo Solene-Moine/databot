@@ -256,8 +256,12 @@ def databaseRequest_body(session: Session):
             session.reply("There are a few relevant datasets, please hang on a little while ! 🙏")
             for root_url in website_dict["udata_root"]:
                 url = root_url + "api/1/datasets/" + "/?tag=" + str(topic.value) + "&format=csv"
-                response = requests.get(url).json()
-                if response['data']:
+                response = {}
+                try:
+                    response = requests.get(url).json()
+                except:
+                    print(f"Error: Unvalid API request {url}. You might want to look into it. Is the main website of this data platform down ?")
+                if not len(response) == 0 and response['data']:
                     for dataset in response['data']:
                         for resource in dataset['resources']:
                             if resource['format'] == "csv":

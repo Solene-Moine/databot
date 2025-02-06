@@ -53,6 +53,9 @@ def open_data():
                 st.write(f"CSV URL: {expander_entry['dataset_url']}")
                 delimiter = st.text_input(label='Delimiter', value=',', key=f'delimiter_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}')
                 project_name = st.text_input(label='Project Name', value=expander_entry["dataset_title"], key=f'name_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}')
+                st.write("Preview :")
+                dataset_preview = pd.read_csv(expander_entry['dataset_url'], nrows=2)
+                st.dataframe(dataset_preview)
                 if st.button(f"Generate bot", key=f'button_{expander_entry["dataset_url"]}'):
                     app = get_app()
                     file_url = expander_entry["dataset_url"]
@@ -70,7 +73,6 @@ def open_data():
     def on_message(ws, payload_str):
         #https://github.com/streamlit/streamlit/issues/2838
         """This function is run on every message the bot sends"""
-        dataset_creation = False
         streamlit_session = get_streamlit_session()
         payload: Payload = Payload.decode(payload_str)
         content = None
