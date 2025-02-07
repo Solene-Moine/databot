@@ -29,7 +29,8 @@ Look no further than **ParentBot**👴 !
 - 🔄 **Synonym-powered search**. No matches? ParentBot suggests alternative keywords and related terms to help you uncover hidden gems.
 - 🌍 **Expandable access**. Need more sources? Easily integrate additional Open Data platforms in just a few steps ! (see Enhancement section)
 
-insert pretty screenshot here (need to see what several expanders look like, and what synonym proposition looks like)
+![Parentbot Main UI Screenshot](docs/source/img/parentbot_mainUI.png)
+![Parentbot Expander Screenshot](docs/source/img/parentbot_expandercontent.png)
 
 ## Requirements
 
@@ -110,7 +111,36 @@ streamlit run main.py
 
 ## Enhancement
 
-how to add more data platform, possibly ckan ?
+#### Additionnal support
+
+Curently, the parentbot is only able to request datasets from open data platform using the uData API. To add a new platform, write its domain name in the **udata_root** section of **src/app/open_data_portal_API.json**
+
+```bash
+{   
+    "udata_root" : [
+        "https://data.public.lu/",
+        "https://www.data.gouv.fr/",
+        "https://dados.gov.pt/"
+    ],
+    "ckan_root" : [
+        "https://catalog.data.gov/api/3/action/",
+        "https://www.donneesquebec.ca/recherche/api/action/",
+        "https://opendata.nhsbsa.net/api/3/action/",
+        "https://ckan.opendata.swiss/api/3/action/",
+        "https://data.cnra.ca.gov/api/3/action/",
+        "https://open.canada.ca/data/en/api/3/action/",
+        "https://opendata-ajuntament.barcelona.cat/data/api/3/action/",
+        "https://catalog.sarawak.gov.my/api/3/action/",
+        "https://open.africa/api/3/action/",
+        "https://data.gov.au/api/3/action/",
+        "https://data.gov.ie/api/3/action/",
+        "https://data.boston.gov/api/3/action/",
+        "https://www.data.qld.gov.au/api/3/action/",
+        "https://data.illinois.gov/api/3/action/",
+        "https://dati.gov.it/opendata/api/3/action/"
+    ]
+}
+```
 
 ## License
 

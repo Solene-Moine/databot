@@ -125,10 +125,8 @@ def get_datasets_info_with_tag_from_platform(opendata_url, tag, datasets_info):
 
 neutral_state = parent_bot.new_state('neutral_state', initial=True)
 help_state = parent_bot.new_state('help_state')
-transition_state = parent_bot.new_state('transition_state')
 databaseRequest_state = parent_bot.new_state('databaseRequest_state')
 updateTags_state = parent_bot.new_state('updateTags_state')
-iddle_state = parent_bot.new_state('iddle_state')
 giveMoreDetails_state = parent_bot.new_state('giveMoreDetails_state')
 
 # ENTITIES
