@@ -124,7 +124,6 @@ help_state = parent_bot.new_state('help_state')
 transition_state = parent_bot.new_state('transition_state')
 databaseRequest_state = parent_bot.new_state('databaseRequest_state')
 updateTags_state = parent_bot.new_state('updateTags_state')
-askForMoreDetails_state = parent_bot.new_state('askForMoreDetails_state')
 iddle_state = parent_bot.new_state('iddle_state')
 giveMoreDetails_state = parent_bot.new_state('giveMoreDetails_state')
 
@@ -305,57 +304,46 @@ def databaseRequest_body(session: Session):
                 session.reply(f"I didn't find a single dataset for the tag {topic.value}, even though there should be one. You might want to ask me to update my tag list.")
                 return
             else :
+                session.set('all_datasets_info', all_datasets_info)
                 dataset_number = len(all_datasets_info)
-                session.reply(f"I found {dataset_number} result(s) mentioning {topic.value}:")
-                all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
-                session.reply(all_datasets_info_json)
-                # if dataset_number <= 10:
-                #     session.reply(f"I found {dataset_number} result(s) mentioning {topic.value}:")
-                #     all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
-                #     session.reply(all_datasets_info_json)
-                # else : 
-                #     session.set('need_more_detail_on_request', True)
-                #     session.set('all_datasets_info', all_datasets_info)
-                #     session.reply(f"I found quite a lot of datasets mentioning {topic.value}. Can you give me more details on what you are looking for ?")
+                if dataset_number <= 10:
+                    session.reply(f"I found {dataset_number} result(s) mentioning {topic.value}:")
+                    all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
+                    session.reply(all_datasets_info_json)
+                else : 
+                    session.set('need_more_detail_on_request', True)
+                    session.set('all_datasets_info', all_datasets_info)
+                    session.reply(f"I found quite a lot of datasets mentioning {topic.value}. Can you give me more details on what you are looking for ?")
  
 databaseRequest_state.set_body(databaseRequest_body)
-databaseRequest_state.when_variable_matches_operation_go_to('need_more_detail_on_request', operator.eq, True, askForMoreDetails_state)  
 databaseRequest_state.when_variable_matches_operation_go_to('need_more_detail_on_request', operator.eq, False, neutral_state)
+#If we do need more detail, we will wait for the users answer
+databaseRequest_state.when_intent_matched_go_to(databaseRequest_intent, giveMoreDetails_state)
+databaseRequest_state.when_variable_matches_operation_go_to('need_more_detail_on_request', operator.eq, True, giveMoreDetails_state)  
 
 
+def giveMoreDetails_body(session: Session):
+    all_datasets_info = session.get('all_datasets_info')
+    session.reply("Here are the 10 dataset I found most suited to your needs :")
+    answer = gpt.predict(
+         f"You are being used within an intent-based chatbot. The user is asking for a dataset fitting this description: {session.message}."
+         f"Here are all the dataset you have available : {all_datasets_info}."
+         f"Select 10 datasets that are the closest to the user's needs. Give them back using this format :"
+         f"number : dataset_url"
+         f"Do not write anything else."
+         )
+    urls_to_keep = []
+    for line in answer.split("\n"):  #We extract the URLs to keep from the llm answer
+        parts = line.split(" : ")
+        if len(parts) == 2:
+            url = parts[1].strip() 
+            urls_to_keep.append(url)
+    all_datasets_info = [dataset for dataset in all_datasets_info if dataset["dataset_url"] in urls_to_keep]
+    all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
+    session.reply(all_datasets_info_json)
 
-# def askForMoreDetails_body(session: Session):
-#     session.reply(f"The client is now free to give more details")
-    
-#     #session.reply(f"I found quite a lot of datasets mentioning {topic.value}. Can you give me more details on what you are looking for ?")
-#     #chat_history = session.get_chat_history(n=5) #List[Message]
-
-# askForMoreDetails_state.set_body(askForMoreDetails_body)
-# askForMoreDetails_state.when_no_intent_matched_go_to(giveMoreDetails_state)
-
-
-
-# def giveMoreDetails_body(session: Session):
-#     all_datasets_info = session.get('all_datasets_info')
-#     answer = gpt.predict(
-#         f"You are being used within an intent-based chatbot. The user is asking for a dataset fitting this description: {session.message}."
-#         f"Here are all the dataset you have available : {all_datasets_info}."
-#         f"Select 10 datasets that are the closest to the user's needs."
-#         )
-#     session.reply(answer)
-
-
-#     all_datasets_info = session.get('all_datasets_info')
-#     """for dataset in all_datasets_info :
-#         break"""
-
-#     all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
-#     session.reply(all_datasets_info_json)
-#     #chat_history: list[Message] = session.get_chat_history(n=5)
-#     #according to your info, here are the 10 best fits
-
-# giveMoreDetails_state.set_body(giveMoreDetails_body)
-# giveMoreDetails_state.go_to(transition_state)
+giveMoreDetails_state.set_body(giveMoreDetails_body)
+giveMoreDetails_state.go_to(neutral_state)
 
 
 def updateTags_body(session: Session):
