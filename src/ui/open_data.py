@@ -56,12 +56,23 @@ def open_data():
                     st.write(f"Organization: {expander_entry['dataset_organization']}")
                     st.write(f"Description: {expander_entry['dataset_description']}")
                     st.write(f"CSV URL: {file_url}")
-                    delimiter = st.text_input(label='Delimiter', value=',', key=f'delimiter_{file_url}_{random.randint(1, 10000)}')
-                    project_name = st.text_input(label='Project Name', value=expander_entry["dataset_title"], key=f'name_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}')
-                    st.write("Preview (using your chosen delimiter):")
+
+                    delimiter_key = f"delimiter_{file_url}"
+                    name_key = f"name_{file_url}"
+                    if delimiter_key not in st.session_state:
+                        st.session_state[delimiter_key] = ','  # Default delimiter
+                    if name_key not in st.session_state:
+                        st.session_state[name_key] = expander_entry["dataset_title"]  # Default project name
+
+                    delimiter = st.text_input(label='Delimiter', value=st.session_state[delimiter_key], key=delimiter_key)
+                    #st.session_state[delimiter_key] = delimiter #to store the new value of the delimiter in the session, so it doesn't get erased everytime the expander code is rerun
+                    project_name = st.text_input(label='Project Name', value=st.session_state[name_key], key=name_key)
+                    #st.session_state[name_key] = project_name
+                    st.write("Dataset preview (using your chosen delimiter):")
                     csv_encoding = chardet.detect(requests.get(file_url).content)['encoding']
                     dataset_preview = pd.read_csv(file_url, sep=delimiter, encoding=csv_encoding, nrows=2)
                     st.dataframe(dataset_preview)
+
                     if st.button(f"Generate bot", key=f'button_{file_url}'):
                         app = get_app()
                         if project_name in [project.name for project in app.projects]:
