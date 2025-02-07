@@ -47,7 +47,12 @@ def open_data():
     def display_expanders(message):
         for expander_entry in message.content.expanders: 
             file_url = expander_entry["dataset_url"] 
-            response = requests.head(file_url) #check that the csv link is valid
+            try: #check that the csv url is valid before displaying the expander
+                response = requests.head(file_url, timeout=5)
+            except requests.RequestException as e:
+                print(f"Error checking URL {file_url}, ignoring file")
+                continue #no need to stay in this loop iteration if the csv url is not valid
+
             if response.status_code == 200:
                 with st.expander(expander_entry["dataset_title"], False): 
                     st.write(f"Source platform: {expander_entry['dataset_source']}")
@@ -68,7 +73,7 @@ def open_data():
                     project_name = st.text_input(label='Project Name', value=st.session_state[name_key], key=name_key)
                     st.write("Dataset preview (using your chosen delimiter):")
                     csv_encoding = chardet.detect(requests.get(file_url).content)['encoding']
-                    dataset_preview = pd.read_csv(file_url, sep=delimiter, encoding=csv_encoding, nrows=2)
+                    dataset_preview = pd.read_csv(file_url, sep=delimiter, encoding=csv_encoding, nrows=2, on_bad_lines='skip')
                     st.dataframe(dataset_preview)
 
                     if st.button(f"Generate bot", key=f'button_{file_url}'):

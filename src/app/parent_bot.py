@@ -82,7 +82,11 @@ def get_datasets_info_with_tag_from_platform(opendata_url, tag, datasets_info):
         for dataset in response['data']:
             for resource in dataset['resources']:
                 if resource['format'] == "csv":
-                    response = requests.head(resource["url"]) #check that the csv link given is valid before considering the dataset as useful
+                    try: #check that the csv url is valid before considering the dataset as useful
+                        response = requests.head(resource["url"], timeout=5)
+                    except requests.RequestException as e:
+                        print(f"Error checking URL {resource['url']}, ignoring file")
+                        continue #no need to stay in this loop iteration if the csv url is not valid
                     if response.status_code == 200:
                         title_prompt = (
                             f"Generate a very short descriptive title for a dataset, based on the following information from the dataset:\n"
