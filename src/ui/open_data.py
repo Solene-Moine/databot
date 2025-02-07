@@ -3,6 +3,8 @@ import queue
 import random
 import threading
 import time
+import chardet
+import requests
 from datetime import datetime
 
 import pandas as pd
@@ -43,29 +45,29 @@ def open_data():
             return False
         
     def display_expanders(message):
-        for expander_entry in message.content.expanders:
-            with st.expander(expander_entry["dataset_title"], False):   
-                st.write(f"Source platform: {expander_entry['dataset_source']}")
-                st.write(f"Title: {expander_entry['dataset_title']}")
-                st.write(f"Creation Date: {expander_entry['dataset_date']}")
-                st.write(f"Organization: {expander_entry['dataset_organization']}")
-                st.write(f"Description: {expander_entry['dataset_description']}")
-                st.write(f"CSV URL: {expander_entry['dataset_url']}")
-                delimiter = st.text_input(label='Delimiter', value=',', key=f'delimiter_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}')
-                project_name = st.text_input(label='Project Name', value=expander_entry["dataset_title"], key=f'name_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}')
-                st.write("Preview (using your chosen delimiter):")
-                dataset_preview = pd.read_csv(expander_entry['dataset_url'], sep=delimiter, nrows=2)
-                st.dataframe(dataset_preview)
-                if st.button(f"Generate bot", key=f'button_{expander_entry["dataset_url"]}'):
-                    app = get_app()
-                    file_url = expander_entry["dataset_url"]
-                    if file_url is None:
-                        st.error('Please introduce a CSV URL')
-                    else:
+        for expander_entry in message.content.expanders: 
+            file_url = expander_entry["dataset_url"] 
+            response = requests.head(file_url) #check that the csv link is valid
+            if response.status_code == 200:
+                with st.expander(expander_entry["dataset_title"], False): 
+                    st.write(f"Source platform: {expander_entry['dataset_source']}")
+                    st.write(f"Title: {expander_entry['dataset_title']}")
+                    st.write(f"Creation Date: {expander_entry['dataset_date']}")
+                    st.write(f"Organization: {expander_entry['dataset_organization']}")
+                    st.write(f"Description: {expander_entry['dataset_description']}")
+                    st.write(f"CSV URL: {file_url}")
+                    delimiter = st.text_input(label='Delimiter', value=',', key=f'delimiter_{file_url}_{random.randint(1, 10000)}')
+                    project_name = st.text_input(label='Project Name', value=expander_entry["dataset_title"], key=f'name_{expander_entry["dataset_url"]}_{random.randint(1, 10000)}')
+                    st.write("Preview (using your chosen delimiter):")
+                    csv_encoding = chardet.detect(requests.get(file_url).content)['encoding']
+                    dataset_preview = pd.read_csv(file_url, sep=delimiter, encoding=csv_encoding, nrows=2)
+                    st.dataframe(dataset_preview)
+                    if st.button(f"Generate bot", key=f'button_{file_url}'):
+                        app = get_app()
                         if project_name in [project.name for project in app.projects]:
                             st.error(f"The project name '{project_name}' already exists. Please choose another one")
                         else:
-                            project = Project(app, project_name, pd.read_csv(file_url, delimiter=delimiter))
+                            project = Project(app, project_name, pd.read_csv(file_url, delimiter=delimiter, encoding=csv_encoding))
                             st.session_state[SELECTED_PROJECT] = project
                             st.info(
                                 f'The project **{project.name}** has been created! Go to **Admin** to train a 🤖 bot upon it.')

@@ -77,7 +77,7 @@ def get_datasets_info_with_tag_from_platform(opendata_url, tag, datasets_info):
     try:
         response = requests.get(url).json()
     except:
-        print(f"Error: Unvalid API request {url}. You might want to look into it. Is the main website of this data platform down ?")
+        print(f"Error: Unvalid API request {url}.")
     if not len(response) == 0 and response['data']:
         for dataset in response['data']:
             for resource in dataset['resources']:
