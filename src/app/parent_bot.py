@@ -4,6 +4,7 @@
 
 import logging
 import requests
+import re
 from requests.exceptions import RequestException
 import json
 import operator
@@ -54,7 +55,7 @@ def updateTags(): #get all the existing tags
     tags = set()
 
     for root_url in website_dict["udata_root"]: #works for any website using uData API. Only need to update open_data_portal_API.json to give the html root
-        url = root_url + "?format=csv"
+        url = root_url + "api/1/datasets/?format=csv"
         while(url):
             try:
                 response = requests.get(url).json()
@@ -284,14 +285,14 @@ def databaseRequest_body(session: Session):
             if user_knows_about_tags_update == False:
                 answer = gpt.predict(
                     f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none. "
-                    f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym or another spelling to their first demand if one is in the list. You can give several tags, but they have to be on the list."
+                    f"Here is the list of the only available tags: {tags_str}. Give them possible synonyms or other spellings to their first demand if some are in the list. They HAVE to be on the list."
                     f"Tell them that they can ask you to update your tag list if they think it is not up to date."
                     )
                 user_knows_about_tags_update = True
             else:
                 answer = gpt.predict(
                     f"You are being used within an intent-based chatbot. The user asked you to provide a dataset with this specific tag '{topic.value}' but you found none."
-                    f"Here is the list of the only available tags: {tags_str}. Give them a possible synonym or another spelling to their first demand if one is in the list. You can give several tags, but they have to be on the list."
+                    f"Here is the list of the only available tags: {tags_str}. Give them possible synonyms or other spellings to their first demand if some are in the list. They HAVE to be on the list."
                     )
             session.reply(answer)
             return
@@ -330,16 +331,19 @@ def giveMoreDetails_body(session: Session):
     answer = gpt.predict(
          f"You are being used within an intent-based chatbot. The user is asking for a dataset fitting this description: {session.message}."
          f"Here are all the dataset you have available : {all_datasets_info}."
-         f"Select 10 datasets that are the closest to the user's needs. Give them back using this format :"
+         f"Select 10 datasets that are the closest to the user's needs. Be very mindful of the keywords they gave you."
+         f"Give them back in order of relevance using this format :"
          f"number : dataset_url"
-         f"Do not write anything else."
+         f"Do not write anything else, and it is crucial to respect the format."
+         f"Warning : the dataset_url is NOT the dataset_source !!!"
          )
-    urls_to_keep = []
-    for line in answer.split("\n"):  #We extract the URLs to keep from the llm answer
-        parts = line.split(" : ")
-        if len(parts) == 2:
-            url = parts[1].strip() 
-            urls_to_keep.append(url)
+    # Regex pattern to capture URLs after 'number :' 
+    url_pattern = r'[:]\s*(https?://[^\s]+)'
+
+    # Find all URLs in the response
+    urls_to_keep = re.findall(url_pattern, answer)
+
+    # Filter all_datasets_info based on extracted URLs
     all_datasets_info = [dataset for dataset in all_datasets_info if dataset["dataset_url"] in urls_to_keep]
     all_datasets_info_json = json.dumps(all_datasets_info, indent=4)
     session.reply(all_datasets_info_json)
