@@ -139,11 +139,6 @@ word_entity = parent_bot.new_entity(
 
 # INTENTS
 
-hello_intent = parent_bot.new_intent(
-    name='hello_intent',
-    description='The user greets you'
-)
-
 negative_intent = parent_bot.new_intent(
     name='negative_intent',
     description='The user answer with the negative',
@@ -166,23 +161,38 @@ help_intent = parent_bot.new_intent(
     'what can you do ?',
     'help',
     'can you help me',
+    'help',
     'how do I get a specific dataset ?',
     'how do I ask you for a dataset ?',
+    'help',
+    'help.',
     'What kind of data can you provide ?',
+    'please help',
+    'help.',
     'What kind of dataset can you fetch',
+    'help',
     'What can I ask for',
+    'help!',
     'What is your purpose',
+    'help?',
     'Where are your data coming from',
+    'help me!',
     'tell me about your functionnalities',
     "give me your sources",
     "Can I get some assistance?",
+    'help',
     "I need help.",
     "Help me out here.",
     "What do you offer?",
+    'help',
+    'help...',
+    'help!',
     "How do I use you?",
     "Explain your features.",
     "What can I ask you?",
+    'help me please',
     "Show me how to get a dataset.",
+    'just help me',
 ])
 
 databaseRequest_intent = parent_bot.new_intent(
@@ -248,7 +258,6 @@ def neutral_body(session: Session):
         session.reply("What else can I do for you ?")
 
 neutral_state.set_body(neutral_body)
-neutral_state.when_intent_matched_go_to(hello_intent, neutral_state)
 neutral_state.when_intent_matched_go_to(databaseRequest_intent, databaseRequest_state)
 neutral_state.when_intent_matched_go_to(updateTags_intent, updateTags_state)
 
@@ -264,7 +273,6 @@ def help_body(session: Session):
 
 help_state.set_body(help_body)
 help_state.set_global(help_intent)
-help_state.go_to(neutral_state)
 
 
 

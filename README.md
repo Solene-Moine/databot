@@ -30,9 +30,12 @@ Look no further than **ParentBot**👴 !
 - 🌍 **Expandable access**. Need more sources? Easily integrate additional Open Data platforms in just a few steps ! (see Enhancement section)
 
 ![Parentbot Main UI Screenshot](docs/source/img/parentbot_mainUI.png)
+
 ![Parentbot Expander Screenshot](docs/source/img/parentbot_expandercontent.png)
 
 ## Requirements
+<details>
+<summary>See more</summary>
 
 - Python 3.11
 - Recommended: Create a virtual environment (e.g. [venv](https://docs.python.org/3/library/venv.html), [conda](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html))
@@ -55,10 +58,13 @@ deactivate ChatbotVirtualEnv
 
 To permanently delete the environment: 
 ```bash
-rm -rf ChatbotVirtualEnv (depuis le parent directory)
+rm -rf ChatbotVirtualEnv
 ```
+</details>
 
 ## Installation
+<details>
+<summary>See more</summary>
 
 ```bash
 git clone https://github.com/BESSER-PEARL/databot
@@ -66,8 +72,11 @@ cd databot
 pip install -r requirements.txt
 touch config.ini
 ```
+</details>
 
 ## Configuration
+<details>
+<summary>See more</summary>
 
 For the parent_bot to work, you will need an OpenAI API Key.
 In your config.ini, paste the following text, and replace "**YOUR-OPENAI-API-KEY**" with your actual key. 
@@ -101,21 +110,27 @@ db.monitoring.database = DB-NAME
 db.monitoring.username = DB-USERNAME
 db.monitoring.password = DB-PASSWORD
 ```
+</details>
 
 ## Launching
+<details>
+<summary>See more</summary>
 
 To launch the platform in your browser, simply run this command from the databot directory.
 ```bash
 streamlit run main.py
 ```
+</details>
 
 ## Enhancement
+<details>
+<summary>See more</summary>
 
 #### Additionnal support
 
 Curently, the parentbot is only able to request datasets from open data platform using the uData API. To add a new platform, write its domain name in the **udata_root** section of **src/app/open_data_portal_API.json**
 
-```bash
+```json
 {   
     "udata_root" : [
         "https://data.public.lu/",
@@ -141,6 +156,7 @@ Curently, the parentbot is only able to request datasets from open data platform
     ]
 }
 ```
+</details>
 
 ## License
 
