@@ -10,7 +10,7 @@ The highlights of DataBot are:
   - 🌐 Automatically load all the data sources from an Open Data Portal through its API (see ParentBot).
 - 🔎 A **data schema** is automatically inferred from the data source, and can be **enhanced** 💪 to improve the bot knowledge about 
   the data (e.g., synonyms or translations). This can be done either manually or using ✨AI.
-- 🤖 **Automatically generate a chatbot for each data source**. These chatbots are powered by the [**BESSER Bot Framework**](https://github.com/BESSER-PEARL/bot-framework).
+- 🤖 **Automatically generate a chatbot for each data source**. These chatbots are powered by the [**BESSER Agentic Framework**](https://github.com/BESSER-PEARL/bot-framework).
   They recognize the user intent and generate the appropriate answer. So, no hallucinations at all.
 - Generation of tabular📅 and graphical📈 answers.
 - 🎙️ Interact with the chatbots either writing or speaking: **voice recognition integrated**.
@@ -32,6 +32,22 @@ Look no further than **ParentBot**👴 !
 ![Parentbot Main UI Screenshot](docs/source/img/parentbot_mainUI.png)
 
 ![Parentbot Expander Screenshot](docs/source/img/parentbot_expandercontent.png)
+
+![Parentbot State graph](docs/source/img/parentbot_graph.png)
+
+Here is the structural graph of the ParentBot, showing states, intents, and transitions. (see BESSER Agentic Framework[**BESSER Agentic Framework**](https://github.com/BESSER-PEARL/bot-framework))
+The conversation starts in neutral_state, where the bot greets the user and asks how it can help. The user typically requests a dataset, e.g.:
+
+"Hello! Can you provide a dataset on electric sockets?"
+
+The bot extracts the relevant tag and searches for matching datasets:
+
+- If fewer than 10 results are found, they are displayed in interactive expanders with key details (title, source, AI-generated summary). The user can then select "Generate Bot" to create a DataBot for further exploration.
+- If more than 10 results exist, the bot moves to giveMoreDetails_state, prompting the user for more specifics to refine the search.
+The help_state is globally accessible, providing guidance on using the bot. Some states transition automatically once their tasks are complete.
+- If no results are found (i.e., the tags provided don’t match any known tags), the bot will search for a close match or synonym to help the user find relevant datasets
+
+The help_state is globally accessible, providing guidance on using the bot. Some states transition automatically once their tasks are complete.
 
 ## Requirements
 <details>
@@ -122,11 +138,9 @@ streamlit run main.py
 ```
 </details>
 
-## Enhancement
+## Dataset Search Process
 <details>
 <summary>See more</summary>
-
-#### Additionnal support
 
 Curently, the parentbot is only able to request datasets from open data platform using the uData API. To add a new platform, write its domain name in the **udata_root** section of **src/app/open_data_portal_API.json**
 
@@ -156,6 +170,23 @@ Curently, the parentbot is only able to request datasets from open data platform
     ]
 }
 ```
+
+Initial efforts have been made to support CKAN-based platforms, as CKAN is widely used across many open data portals. A list of CKAN-compatible platforms has been compiled, but full support is not yet implemented. The main challenge lies in differences in API request structures, which require adaptation before integration.
+
+For uData platforms, the chatbot constructs API queries in the following format:
+
+```python
+def get_datasets_info_with_tag_from_platform(opendata_url, tag, datasets_info):
+    url = opendata_url + "api/1/datasets/" + "/?tag=" + tag + "&format=csv"
+    response = {}
+    try:
+        response = requests.get(url).json()
+```
+
+This ensures only datasets with CSV-formatted resources are considered. The chatbot processes the API’s JSON response, filtering out datasets that lack CSV files.
+
+To enhance usability, an LLM generates human-readable dataset titles and summaries. If missing, the chatbot defaults to original metadata. The final dataset list is structured as JSON and displayed interactively using expanders.
+
 </details>
 
 ## License
