@@ -1,0 +1,24 @@
+{   
+    "udata_root" : [
+        "https://data.public.lu/",
+        "https://www.data.gouv.fr/",
+        "https://dados.gov.pt/"
+    ],
+    "ckan_root" : [
+        "https://catalog.data.gov/api/3/action/",
+        "https://www.donneesquebec.ca/recherche/api/action/",
+        "https://opendata.nhsbsa.net/api/3/action/",
+        "https://ckan.opendata.swiss/api/3/action/",
+        "https://data.cnra.ca.gov/api/3/action/",
+        "https://open.canada.ca/data/en/api/3/action/",
+        "https://opendata-ajuntament.barcelona.cat/data/api/3/action/",
+        "https://catalog.sarawak.gov.my/api/3/action/",
+        "https://open.africa/api/3/action/",
+        "https://data.gov.au/api/3/action/",
+        "https://data.gov.ie/api/3/action/",
+        "https://data.boston.gov/api/3/action/",
+        "https://www.data.qld.gov.au/api/3/action/",
+        "https://data.illinois.gov/api/3/action/",
+        "https://dati.gov.it/opendata/api/3/action/"
+    ]
+}

@@ -2,11 +2,12 @@ import json
 import queue
 import threading
 import time
+import chardet
+import requests
 from datetime import datetime
 
 import pandas as pd
 import plotly
-import re
 import streamlit as st
 import websocket
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -17,6 +18,7 @@ from besser.bot.platforms.payload import Payload, PayloadAction, PayloadEncoder
 from src.app.parent_bot import parent_bot
 from src.app.app import get_app
 from src.app.project import Project
+from src.app.content import Content
 from src.utils.session_state_keys import AI_ICON, CKAN, COUNT_CSVS, COUNT_DATASETS, EDITED_PACKAGES_DF, IMPORT, \
     IMPORT_OPEN_DATA_PORTAL, METADATA, OPEN_DATA_SOURCES, SELECTED_PROJECT, SELECT_ALL_CHECKBOXES, TITLE, UDATA, \
     UPLOAD_DATA
@@ -34,10 +36,58 @@ def open_data():
     # User input component. Must be declared before history writing
     user_input = st.chat_input("What is up?")
 
+    def is_json(string):
+        try:
+            json.loads(string)
+            return True
+        except json.JSONDecodeError:
+            return False
+        
+    def display_expanders(message):
+        for expander_entry in message.content.expanders: 
+            file_url = expander_entry["dataset_url"] 
+            try: #check that the csv url is valid before displaying the expander
+                response = requests.head(file_url, timeout=5)
+            except requests.RequestException as e:
+                print(f"Error checking URL {file_url}, ignoring file")
+                continue #no need to stay in this loop iteration if the csv url is not valid
+
+            if response.status_code == 200:
+                with st.expander(expander_entry["dataset_title"], False): 
+                    st.write(f"Source platform: {expander_entry['dataset_source']}")
+                    st.write(f"Title: {expander_entry['dataset_title']}")
+                    st.write(f"Creation Date: {expander_entry['dataset_date']}")
+                    st.write(f"Organization: {expander_entry['dataset_organization']}")
+                    st.write(f"Description: {expander_entry['dataset_description']}")
+                    st.write(f"CSV URL: {file_url}")
+
+                    delimiter_key = f"delimiter_{file_url}"
+                    name_key = f"name_{file_url}"
+                    if delimiter_key not in st.session_state:
+                        st.session_state[delimiter_key] = ','  # Default delimiter
+                    if name_key not in st.session_state:
+                        st.session_state[name_key] = expander_entry["dataset_title"]  # Default project name
+
+                    delimiter = st.text_input(label='Delimiter', value=st.session_state[delimiter_key], key=delimiter_key)
+                    project_name = st.text_input(label='Project Name', value=st.session_state[name_key], key=name_key)
+                    st.write("Dataset preview (using your chosen delimiter):")
+                    csv_encoding = chardet.detect(requests.get(file_url).content)['encoding']
+                    dataset_preview = pd.read_csv(file_url, sep=delimiter, encoding=csv_encoding, nrows=2, on_bad_lines='skip')
+                    st.dataframe(dataset_preview)
+
+                    if st.button(f"Generate bot", key=f'button_{file_url}'):
+                        app = get_app()
+                        if project_name in [project.name for project in app.projects]:
+                            st.error(f"The project name '{project_name}' already exists. Please choose another one")
+                        else:
+                            project = Project(app, project_name, pd.read_csv(file_url, delimiter=delimiter, encoding=csv_encoding))
+                            st.session_state[SELECTED_PROJECT] = project
+                            st.info(
+                                f'The project **{project.name}** has been created! Go to **Admin** to train a 🤖 bot upon it.')
+
     def on_message(ws, payload_str):
         #https://github.com/streamlit/streamlit/issues/2838
         """This function is run on every message the bot sends"""
-        dataset_creation = False
         streamlit_session = get_streamlit_session()
         payload: Payload = Payload.decode(payload_str)
         content = None
@@ -58,17 +108,26 @@ def open_data():
                 content.append(button)
 
         if content is not None:
-            # Check if content is a URL and create an expander entry
-            if t == MessageType.STR and re.match(r'^(https?|ftp)://[^\s/$.?#].[^\s]*$', content):
-                streamlit_session.session_state["expanders"] = [] #reset the previous datasets when the user ask for a new one
-                expander_entry = {"dataset_title": f"Expander", "url": content}
-                streamlit_session._session_state["expanders"].append(expander_entry)
-            else:
-                message = Message(t=t, content=content, is_user=False, timestamp=datetime.now())
-                streamlit_session._session_state['queue'].put(message)
+            if t == MessageType.STR and is_json(content):
+
+                main_content = content
+                content = Content(main_content=main_content)
+                useful_info_list = json.loads(main_content)
+                for useful_info_dict in useful_info_list:
+                    expander_entry = {
+                        "dataset_source": useful_info_dict["dataset_source"],
+                        "dataset_title": useful_info_dict["dataset_title"],
+                        "dataset_date": useful_info_dict["dataset_date"],
+                        "dataset_organization": useful_info_dict["dataset_organization"],
+                        "dataset_description": useful_info_dict["dataset_description"],
+                        "dataset_url": useful_info_dict["dataset_url"]
+                    }
+                    content.expanders.append(expander_entry)
+
+            message = Message(t=t, content=content, is_user=False, timestamp=datetime.now())
+            streamlit_session._session_state['queue'].put(message)
             
             
-                
         streamlit_session._handle_rerun_script_request()
 
     user_type = {
@@ -77,9 +136,6 @@ def open_data():
     }
 
     # Initialize session state
-    if "expanders" not in st.session_state:
-        st.session_state["expanders"] = []
-
     if 'history' not in st.session_state:
         st.session_state['history'] = []
 
@@ -98,52 +154,29 @@ def open_data():
 
     ws = st.session_state['websocket_parent']
 
-    col1, col2 = st.columns([6, 3], gap = "large")  # Adjust columns to control layout
-
-# Sidebar for expanders
-    if st.session_state["expanders"]:
-        with st.container():  # Display expanders in a container on the right
-            with col2:  # Right column
-                st.write("### Data Exploration")
-                for expander in st.session_state["expanders"]:
-                    with st.expander(expander["dataset_title"], expanded=True):
-                        st.write(f"URL: {expander['url']}")
-                        delimiter = st.text_input(label='Delimiter', value=',', key=f'input_{expander["url"]}')
-                        if st.button(f"Generate bot", key=f'button_{expander["url"]}'):
-                            app = get_app()
-                            file_url = expander["url"]
-                            if file_url is None:
-                                st.error('Please introduce a CSV URL')
-                            else:
-                                project_name = expander["dataset_title"]
-                                if project_name in [project.name for project in app.projects]:
-                                    st.error(f"The project name '{project_name}' already exists. Please choose another one")
-                                else:
-                                    project = Project(app, project_name, pd.read_csv(file_url, delimiter=delimiter))
-                                    st.session_state[SELECTED_PROJECT] = project
-                                    st.info(
-                                        f'The project **{project.name}** has been created! Go to **Admin** to train a 🤖 bot upon it.')
 
     # Display chat messages
     for message in st.session_state['history']:
-        if st.session_state["expanders"]:
-            with col1:
-                with st.chat_message(user_type[message.is_user]):
-                    st.write(message.content)
-        else:
-            with st.chat_message(user_type[message.is_user]):
+        with st.chat_message(user_type[message.is_user]):  
+            if isinstance(message.content, Content): #the content is of type Content only if the message has an expander
+                display_expanders(message)
+            else:
                 st.write(message.content)
+                            
         
     while not st.session_state['queue'].empty():
         with st.chat_message("assistant"):
             message = st.session_state['queue'].get()
             if message.type == MessageType.OPTIONS:
                 st.session_state['buttons'] = message.content
-            elif message.type == MessageType.STR:
+            elif message.type == MessageType.STR :
                 st.session_state['history'].append(message)
                 with st.spinner(''):
                     time.sleep(1)
-                st.write(message.content)
+                if isinstance(message.content, Content):
+                    display_expanders(message) 
+                else:
+                    st.write(message.content)
 
     if 'buttons' in st.session_state:
         buttons = st.session_state['buttons']
