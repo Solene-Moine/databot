@@ -27,15 +27,16 @@ Look no further than **ParentBot**👴 !
   - 📜 **Smart dataset previews**. Get concise summaries of each dataset before making your choice, saving you time and effort.
   - 🤖 **One-click chatbot creation**. Found what you need? Just hit "Generate Bot", and DataBot will take over and analyze your selected datasets.
 - 🔄 **Synonym-powered search**. No matches? ParentBot suggests alternative keywords and related terms to help you uncover hidden gems.
-- 🌍 **Expandable access**. Need more sources? Easily integrate additional Open Data platforms in just a few steps ! (see Enhancement section)
+- 🌍 **Expandable access**. Need more sources? Easily integrate additional Open Data platforms in just a few steps ! (see Dataset Search Process section)
 
 ![Parentbot Main UI Screenshot](docs/source/img/parentbot_mainUI.png)
 
 ![Parentbot Expander Screenshot](docs/source/img/parentbot_expandercontent.png)
 
+Below is the structural graph of the ParentBot, showing states, intents, and transitions. (see [**BESSER Agentic Framework**](https://github.com/BESSER-PEARL/bot-framework))
+
 ![Parentbot State graph](docs/source/img/parentbot_graph.png)
 
-Here is the structural graph of the ParentBot, showing states, intents, and transitions. (see [**BESSER Agentic Framework**](https://github.com/BESSER-PEARL/bot-framework))
 The conversation starts in neutral_state, where the bot greets the user and asks how it can help. The user typically requests a dataset, e.g.:
 
 "Hello! Can you provide a dataset on electric sockets?"
