@@ -35,7 +35,7 @@ Look no further than **ParentBot**👴 !
 
 ![Parentbot State graph](docs/source/img/parentbot_graph.png)
 
-Here is the structural graph of the ParentBot, showing states, intents, and transitions. (see BESSER Agentic Framework[**BESSER Agentic Framework**](https://github.com/BESSER-PEARL/bot-framework))
+Here is the structural graph of the ParentBot, showing states, intents, and transitions. (see [**BESSER Agentic Framework**](https://github.com/BESSER-PEARL/bot-framework))
 The conversation starts in neutral_state, where the bot greets the user and asks how it can help. The user typically requests a dataset, e.g.:
 
 "Hello! Can you provide a dataset on electric sockets?"
@@ -184,6 +184,7 @@ def get_datasets_info_with_tag_from_platform(opendata_url, tag, datasets_info):
 ```
 
 This ensures only datasets with CSV-formatted resources are considered. The chatbot processes the API’s JSON response, filtering out datasets that lack CSV files.
+The URL for the GET request would need some adaptation for CKAN support.
 
 To enhance usability, an LLM generates human-readable dataset titles and summaries. If missing, the chatbot defaults to original metadata. The final dataset list is structured as JSON and displayed interactively using expanders.
 
